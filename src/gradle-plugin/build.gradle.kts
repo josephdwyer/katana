@@ -10,28 +10,18 @@ repositories {
 }
 
 plugins {
+    kotlin("jvm") version "1.3.72"
     id("java-gradle-plugin")
-    kotlin("jvm") version "1.4.0"
+
     kotlin("kapt") version "1.3.72"
     id("com.gradle.plugin-publish") version "0.12.0"
 }
 
-/*
-install {
-    repositories.mavenInstaller {
-        pom.artifactId = 'gradle-plugin'
-    }
-}*/
-
 dependencies {
-    implementation(kotlin("stdlib", "1.4.0"))
-    testCompile(gradleTestKit())
-    testCompile("junit:junit:4+")
+    implementation(kotlin("gradle-plugin", "1.3.72"))
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
 }
-
-// NativeStrings plugin configuration.
 
 pluginBundle {
     website = "https://github.com/josephdwyer/katana"
