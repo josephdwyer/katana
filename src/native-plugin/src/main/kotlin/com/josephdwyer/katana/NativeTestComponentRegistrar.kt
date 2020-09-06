@@ -52,6 +52,7 @@ open class CollectDataExtension(private val messageCollector: MessageCollector, 
 
         configuration[OUTPUT_FILE]?.let {
             File(it).writeText(data.toString())
+            println("Data written to $it")
         }
 
         messageCollector.report(
