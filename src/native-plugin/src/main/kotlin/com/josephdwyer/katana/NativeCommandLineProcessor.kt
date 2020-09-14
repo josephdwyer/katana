@@ -24,7 +24,6 @@ class NativeCommandLineProcessor : CommandLineProcessor {
         value: String,
         configuration: CompilerConfiguration
     ) {
-
         return when (option.optionName) {
             "outputFile" -> configuration.put(OUTPUT_FILE, value)
             else -> configuration.put(OUTPUT_FILE, "")
@@ -32,4 +31,4 @@ class NativeCommandLineProcessor : CommandLineProcessor {
     }
 }
 
-val OUTPUT_FILE = CompilerConfigurationKey<String>("the file to output the compiler informatin to")
+val OUTPUT_FILE = CompilerConfigurationKey<String>("the file to output the compiler information to")

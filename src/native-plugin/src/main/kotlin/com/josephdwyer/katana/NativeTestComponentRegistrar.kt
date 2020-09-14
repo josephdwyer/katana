@@ -34,13 +34,12 @@ class NativeTestComponentRegistrar : ComponentRegistrar {
         }
 
         println("Hey I am a compiler plugin")
-        val messageCollector: MessageCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
 
-        IrGenerationExtension.registerExtension(project, CollectDataExtension(messageCollector, configuration))
+        IrGenerationExtension.registerExtension(project, CollectDataExtension(configuration))
     }
 }
 
-open class CollectDataExtension(private val messageCollector: MessageCollector, private val configuration: CompilerConfiguration) : IrGenerationExtension {
+open class CollectDataExtension(private val configuration: CompilerConfiguration) : IrGenerationExtension {
 
     private val data = StringBuilder()
 
@@ -52,13 +51,8 @@ open class CollectDataExtension(private val messageCollector: MessageCollector, 
 
         configuration[OUTPUT_FILE]?.let {
             File(it).writeText(data.toString())
-            println("Data written to $it")
+            println("Katana data written to $it")
         }
-
-        messageCollector.report(
-            CompilerMessageSeverity.WARNING,
-            "*** Native Plugin: $data"
-        )
     }
 }
 
