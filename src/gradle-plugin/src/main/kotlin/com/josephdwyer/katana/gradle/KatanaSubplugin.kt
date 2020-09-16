@@ -32,8 +32,6 @@ class KatanaSubplugin : KotlinGradleSubplugin<AbstractCompile> {
             outFilePath = extension.outputFile
         }
 
-        println("Katana Output File: $outFilePath")
-
         val outputFileOption = SubpluginOption(key = "outputFile", value = outFilePath)
         return listOf(outputFileOption)
     }

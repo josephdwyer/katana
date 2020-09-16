@@ -8,6 +8,9 @@ base.archivesBaseName = "katana-compiler-plugin"
 repositories {
     mavenCentral()
     jcenter()
+    maven {
+        url = uri("https://plugins.gradle.org/m2/")
+    }
 }
 
 plugins {
@@ -15,16 +18,21 @@ plugins {
     kotlin("kapt") version "1.3.72"
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
+    id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("java")
 }
 
 dependencies {
-    //implementation(kotlin("stdlib", "1.4.0"))
-    //testCompile(gradleTestKit())
-    //testCompile("junit:junit:4+")
     compileOnly("org.jetbrains.kotlin:kotlin-compiler")
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
     compileOnly("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.5")
+    implementation("com.google.code.gson:gson:2.8.6")
+}
+
+// by default the output jar is {name}-all we want it to replace the main jar
+tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>().configureEach {
+    classifier = ""
 }
 
 val artifactName = "katana-compiler-plugin"
