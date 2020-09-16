@@ -78,6 +78,7 @@ data class TypeInfo(
 data class FunctionInfo(
         val file: FileInfo,
         val name: String,
+        val visibility: String,
         val typeParameters: Array<String?>?,
         val parameters: Array<FunctionParameter>?,
         val returnType: TypeInfo
@@ -91,12 +92,14 @@ private class OnFunction(
     val collected = mutableListOf<FunctionInfo>()
 
     override fun lower(irFunction: IrFunction) {
-        val sb = StringBuilder()
-
         // we only care about public ones
-        // function.visibility
 
-        val data = mutableListOf<String?>()
+        val visibility = irFunction.visibility.toString()
+
+        if (visibility != "public") {
+            // we only care about public ones
+            return
+        }
 
         // add file section
         val startLine = irFunction.fileEntry.getLineNumber(irFunction.startOffset)
@@ -117,7 +120,7 @@ private class OnFunction(
 
         val returnType = TypeInfo(irFunction.returnType.classifierOrNull?.descriptor?.fqNameSafe?.toString() ?: "Unit", irFunction.returnType.isNullable())
 
-        val function = FunctionInfo(file, functionName, typeParameters, parameters, returnType)
+        val function = FunctionInfo(file, functionName, visibility, typeParameters, parameters, returnType)
 
         collected.add(function)
 
