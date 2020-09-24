@@ -5,7 +5,6 @@ import org.gradle.api.Project
 
 class Katana : Plugin<Project> {
     override fun apply(project: Project) {
-        val extension = project.extensions.create("katanaPlugin", KatanaPluginExtension::class.java)
         project.extensions.create("katana", KatanaPluginExtension::class.java)
     }
 }

@@ -3,6 +3,7 @@ package com.josephdwyer.katana
 import com.google.auto.service.AutoService
 import com.google.gson.GsonBuilder
 import com.intellij.mock.MockProject
+import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.FunctionLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -10,18 +11,24 @@ import org.jetbrains.kotlin.backend.common.ir.allParameters
 import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.path
+import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.isNullable
-import org.jetbrains.kotlin.ir.util.file
-import org.jetbrains.kotlin.ir.util.fileEntry
-import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
 import org.jetbrains.kotlin.konan.file.File
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
+import java.lang.reflect.TypeVariable
 
 @AutoService(ComponentRegistrar::class)
 class NativeTestComponentRegistrar : ComponentRegistrar {
@@ -31,7 +38,7 @@ class NativeTestComponentRegistrar : ComponentRegistrar {
             return
         }
 
-        println("Hey I am a compiler plugin")
+    println("Hi, I am your friendly neighborhood compiler plugin Katana!")
 
         IrGenerationExtension.registerExtension(project, CollectDataExtension(configuration))
     }
@@ -77,11 +84,14 @@ data class TypeInfo(
 
 data class FunctionInfo(
         val file: FileInfo,
+        //val packageName: String
         val name: String,
         val visibility: String,
         val typeParameters: Array<String?>?,
         val parameters: Array<FunctionParameter>?,
-        val returnType: TypeInfo
+        val returnType: TypeInfo,
+        val parent: String,
+        val superClasses: Array<String>
 )
 
 private class OnFunction(
@@ -107,8 +117,6 @@ private class OnFunction(
 
         val file = FileInfo(irFunction.file.path, startLine, endLine)
 
-        // - (improvement) Figure out how to get the interfaces that something implements
-        // - Figure out some way to deterministically link to the header file entry (if possible)
         val functionName = irFunction.fqNameWhenAvailable?.toString() ?: return
 
         val typeParameters = irFunction.typeParameters.map { it.fqNameWhenAvailable?.toString() }.toTypedArray()
@@ -120,18 +128,50 @@ private class OnFunction(
 
         val returnType = TypeInfo(irFunction.returnType.classifierOrNull?.descriptor?.fqNameSafe?.toString() ?: "Unit", irFunction.returnType.isNullable())
 
-        val function = FunctionInfo(file, functionName, visibility, typeParameters, parameters, returnType)
+        // - (improvement) Figure out how to get the interfaces that something implements
+        // - Figure out some way to deterministically link to the header file entry (if possible)
+
+        val superClasses = irFunction.parentClassOrNull?.let {
+            it.superTypes.map {
+                (it.classifierOrNull?.descriptor?.fqNameSafe.toString()) ?: ""
+            }.toTypedArray()
+        } ?: emptyArray()
+
+        var parent: String = irFunction.parent.let {
+            it.fqNameForIrSerialization.toString()
+        }
+
+        val function = FunctionInfo(file, functionName, visibility, typeParameters, parameters, returnType, parent, superClasses)
 
         collected.add(function)
-
-        /*
-        irFunction.parent.let {
-            if (it is IrClass) {
-                it.superTypes.forEach {
-                    sb.append(" ${it.classifierOrNull?.descriptor?.fqNameSafe}")
-                }
-            }
-        }
-         */
     }
 }
+/*
+private class OnClass(
+        val context: IrPluginContext
+) : IrElementTransformerVoid(), ClassLoweringPass {
+
+    override fun lower(irClass: IrClass) {
+
+        if (irClass.isExpect) {
+            // ignore expects because we will get the actually?
+            return
+        }
+
+        // irClass.isCompanion
+        // irClass.isData
+        // irClass.isInline
+        // if (irClass.kind == ClassKind.ENUM_CLASS)
+        // irClass.typeParameters
+
+        // irClass.parent
+
+        // irClass.name
+
+        irClass.superTypes.map {
+            it.classifierOrNull?.isPublicApi
+        }
+    }
+}
+
+ */
