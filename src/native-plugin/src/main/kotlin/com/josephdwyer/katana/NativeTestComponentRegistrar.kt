@@ -3,7 +3,7 @@ package com.josephdwyer.katana
 import com.google.auto.service.AutoService
 import com.google.gson.GsonBuilder
 import com.intellij.mock.MockProject
-import org.jetbrains.kotlin.backend.common.ClassLoweringPass
+import com.sun.jna.platform.win32.WinDef
 import org.jetbrains.kotlin.backend.common.FunctionLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -12,23 +12,20 @@ import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.path
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
-import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
-import org.jetbrains.kotlin.ir.types.IrSimpleType
-import org.jetbrains.kotlin.ir.types.classifierOrNull
-import org.jetbrains.kotlin.ir.types.isNullable
+import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
+import org.jetbrains.kotlin.js.descriptorUtils.getJetTypeFqName
+import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
 import org.jetbrains.kotlin.konan.file.File
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
-import java.lang.reflect.TypeVariable
+import org.jetbrains.kotlin.types.model.typeConstructor
+import org.jetbrains.kotlin.types.typeUtil.TypeNullability
+import org.jetbrains.kotlin.types.typeUtil.nullability
 
 @AutoService(ComponentRegistrar::class)
 class NativeTestComponentRegistrar : ComponentRegistrar {
@@ -77,21 +74,38 @@ data class FunctionParameter(
         val type: TypeInfo
 )
 
+data class TypeParameter(
+        val type: String,
+        val nullability: TypeNullability
+)
+
 data class TypeInfo(
         val name: String,
-        val nullable: Boolean
+        val typeParameters: List<TypeParameter>,
+        val nullable: Boolean,
+        val classInfo: ClassInfo?
+)
+
+data class ClassInfo(
+        val name: String,
+        val isCompanion: Boolean,
+        val isData: Boolean,
+        val isInline: Boolean,
+        val kind: ClassKind,
+        val superClasses: List<String>,
+        val packageName: String
 )
 
 data class FunctionInfo(
         val file: FileInfo,
-        //val packageName: String
+        val packageName: String,
         val name: String,
         val visibility: String,
-        val typeParameters: Array<String?>?,
-        val parameters: Array<FunctionParameter>?,
+        val parameters: List<FunctionParameter>?,
         val returnType: TypeInfo,
         val parent: String,
-        val superClasses: Array<String>
+        val classInfo: ClassInfo?,
+        val isExpect: Boolean
 )
 
 private class OnFunction(
@@ -115,35 +129,99 @@ private class OnFunction(
         val startLine = irFunction.fileEntry.getLineNumber(irFunction.startOffset)
         val endLine = irFunction.fileEntry.getLineNumber(irFunction.endOffset)
 
+
+        // may be a simpler way to get the package?
+        // irFunction.file.packageFragmentDescriptor
+
         val file = FileInfo(irFunction.file.path, startLine, endLine)
 
-        val functionName = irFunction.fqNameWhenAvailable?.toString() ?: return
+        val functionName = irFunction.name.toString()
 
-        val typeParameters = irFunction.typeParameters.map { it.fqNameWhenAvailable?.toString() }.toTypedArray()
+        /*
+        val typeParameters = irFunction.typeParameters
+                .map {
+                    val typeName = it.fqNameWhenAvailable.toString()
+                    TypeParameter(typeName, TypeNullability.FLEXIBLE)
 
-        val parameters = irFunction.allParameters.map {
-            val type = it.type as IrSimpleType
-            FunctionParameter(it.name.toString(), TypeInfo(type.classifier.descriptor.fqNameSafe.toString(), type.isNullable()))
-        }.toTypedArray()
+               }
+         */
 
-        val returnType = TypeInfo(irFunction.returnType.classifierOrNull?.descriptor?.fqNameSafe?.toString() ?: "Unit", irFunction.returnType.isNullable())
+        val parameters = irFunction.allParameters.map { parameter ->
+            val type = parameter.type as IrSimpleType
+            val typeAsClass = parameter.type.getClass()?.let { getClassInfo(it) }
+
+            val typeParameters = type.toKotlinType()
+                    .arguments
+                    .map {
+                        val typeNullability = it.type.nullability()
+                        val typeName = it.type.getJetTypeFqName(true)
+                        TypeParameter(typeName, typeNullability)
+                    }
+
+            FunctionParameter(
+                    parameter.name.toString(),
+                    TypeInfo(type.classifier.descriptor.fqNameSafe.toString(), typeParameters, type.isNullable(), typeAsClass))
+        }
+
+
+        val returnTypeTypeParameters = irFunction.returnType.toKotlinType()
+                .arguments
+                .map {
+                    val returnTypeNullability = it.type.nullability()
+                    val typeName = it.type.getJetTypeFqName(true)
+                    TypeParameter(typeName, returnTypeNullability)
+                }
+
+        val returnTypeClass = irFunction.returnType.getClass()?.let {
+            getClassInfo(it)
+        }
+
+        val returnType = TypeInfo(irFunction.returnType.classifierOrNull?.descriptor?.fqNameSafe?.toString() ?: "Unit", returnTypeTypeParameters, irFunction.returnType.isNullable(), returnTypeClass)
 
         // - (improvement) Figure out how to get the interfaces that something implements
         // - Figure out some way to deterministically link to the header file entry (if possible)
 
-        val superClasses = irFunction.parentClassOrNull?.let {
-            it.superTypes.map {
-                (it.classifierOrNull?.descriptor?.fqNameSafe.toString()) ?: ""
-            }.toTypedArray()
-        } ?: emptyArray()
+        val classInfo = irFunction.parentClassOrNull?.let { getClassInfo(it) }
+
+        // if this function is in a class, just take the class's package
+        // otherwise it is the fully qualified name minus the function's name
+        val packageName = classInfo?.let { it.packageName } ?:
+                irFunction.fqNameWhenAvailable.toString()
+                .removeSuffix(irFunction.name.toString())
+                .removeSuffix(".")
 
         var parent: String = irFunction.parent.let {
             it.fqNameForIrSerialization.toString()
         }
 
-        val function = FunctionInfo(file, functionName, visibility, typeParameters, parameters, returnType, parent, superClasses)
+        val function = FunctionInfo(file, packageName, functionName,
+                visibility, parameters, returnType,
+                parent, classInfo, irFunction.isExpect)
 
         collected.add(function)
+    }
+
+    private fun getClassInfo(irClass: IrClass) : ClassInfo {
+        // we are trying to remove ".className" from "some.namespace.className"
+        // but, if the class is not in a namespace (thus using the default "<root>" namespace
+        // there won't be any leading content - it will just be "className", so we need to remove in 2 stages
+        val packageName = irClass.fqNameWhenAvailable.toString()
+                .removeSuffix(irClass.name.toString())
+                .removeSuffix(".")
+        // should we default it to "<root>" if it is now empty or leave it to the consumer
+
+        val superTypes = irClass.superTypes.map {
+            (it.classifierOrNull?.descriptor?.fqNameSafe.toString()) ?: ""
+        }
+
+        /*
+        val typeParameters = irClass.typeParameters
+                .mapNotNull {
+                    it.fqNameWhenAvailable?.toString()
+                }
+         */
+
+        return ClassInfo(irClass.name.toString(), irClass.isCompanion, irClass.isData, irClass.isInline, irClass.kind, superTypes, packageName)
     }
 }
 /*

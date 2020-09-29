@@ -39,7 +39,7 @@ val artifactName = "katana-compiler-plugin"
 val artifactGroup = project.group.toString()
 val artifactVersion = project.version.toString()
 
-val pomUrl = "https://github.com/josephdwyer/katana"
+val pomUrl ="https://github.com/josephdwyer/katana"
 val pomScmUrl = "https://github.com/josephdwyer/katana"
 val pomIssueUrl = "https://github.com/josephdwyer/katana/issues"
 val pomDesc = "https://github.com/josephdwyer/katana"
@@ -63,23 +63,28 @@ publishing {
             version = artifactVersion
             from(components["java"])
 
-            pom.withXml {
-                asNode().apply {
-                    appendNode("description", pomDesc)
-                    appendNode("name", rootProject.name)
-                    appendNode("url", pomUrl)
-                    appendNode("licenses").appendNode("license").apply {
-                        appendNode("name", pomLicenseName)
-                        appendNode("url", pomLicenseUrl)
-                        appendNode("distribution", pomLicenseDist)
+            pom {
+                name.set(rootProject.name)
+                description.set(pomDesc)
+                url.set(pomUrl)
+
+                licenses {
+                    license {
+                        name.set(pomLicenseName)
+                        url.set(pomLicenseUrl)
+                        distribution.set(pomLicenseDist)
                     }
-                    appendNode("developers").appendNode("developer").apply {
-                        appendNode("id", pomDeveloperId)
-                        appendNode("name", pomDeveloperName)
+                }
+
+                developers {
+                    developer {
+                        id.set(pomDeveloperId)
+                        name.set(pomDeveloperName)
                     }
-                    appendNode("scm").apply {
-                        appendNode("url", pomScmUrl)
-                    }
+                }
+
+                scm {
+                    url.set(pomScmUrl)
                 }
             }
         }
