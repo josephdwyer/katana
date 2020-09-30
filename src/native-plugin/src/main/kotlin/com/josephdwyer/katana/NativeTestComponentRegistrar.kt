@@ -4,6 +4,7 @@ import com.google.auto.service.AutoService
 import com.google.gson.GsonBuilder
 import com.intellij.mock.MockProject
 import com.sun.jna.platform.win32.WinDef
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.jetbrains.kotlin.backend.common.FunctionLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -35,7 +36,7 @@ class NativeTestComponentRegistrar : ComponentRegistrar {
             return
         }
 
-    println("Hi, I am your friendly neighborhood compiler plugin Katana!")
+        println("Hi, I am your friendly neighborhood compiler plugin Katana!")
 
         IrGenerationExtension.registerExtension(project, CollectDataExtension(configuration))
     }
@@ -91,6 +92,7 @@ data class ClassInfo(
         val isCompanion: Boolean,
         val isData: Boolean,
         val isInline: Boolean,
+        val isExpect: Boolean,
         val kind: ClassKind,
         val superClasses: List<String>,
         val packageName: String
@@ -214,6 +216,7 @@ private class OnFunction(
             (it.classifierOrNull?.descriptor?.fqNameSafe.toString()) ?: ""
         }
 
+
         /*
         val typeParameters = irClass.typeParameters
                 .mapNotNull {
@@ -221,7 +224,7 @@ private class OnFunction(
                 }
          */
 
-        return ClassInfo(irClass.name.toString(), irClass.isCompanion, irClass.isData, irClass.isInline, irClass.kind, superTypes, packageName)
+        return ClassInfo(irClass.name.toString(), irClass.isCompanion, irClass.isData, irClass.isInline, irClass.isExpect, irClass.kind, superTypes, packageName)
     }
 }
 /*

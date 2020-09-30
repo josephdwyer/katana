@@ -40,15 +40,15 @@ class KatanaSubplugin : KotlinGradleSubplugin<AbstractCompile> {
 
 
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
-        groupId = "com.josephdwyer",
-        artifactId = "not-supported-compiler-plugin",
-        version = "0.0.1" // remember to bump this version before any release!
+        groupId = "com.josephdwyer.katana",
+        artifactId = "jvm-katana-compiler-plugin",
+        version = "0.0.2"
     )
 
     override fun getNativeCompilerPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.josephdwyer.katana",
         artifactId = "katana-compiler-plugin",
-        version = "0.0.1" // remember to bump this version before any release!
+        version = "0.0.1"
     )
 }
 
