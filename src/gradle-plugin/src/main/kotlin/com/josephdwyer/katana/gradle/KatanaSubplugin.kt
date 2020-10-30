@@ -47,7 +47,7 @@ class KatanaSubplugin : KotlinGradleSubplugin<AbstractCompile> {
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.josephdwyer.katana",
         artifactId = "jvm-katana-compiler-plugin",
-        version = "0.0.3"
+        version = "0.0.2"
     )
 
     // This points to our native plugin that is published on bintray

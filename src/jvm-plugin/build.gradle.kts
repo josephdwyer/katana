@@ -4,7 +4,7 @@ import java.util.Date
 // so that compiling projects with JVM things will work
 
 group = "com.josephdwyer.katana"
-version = "0.0.3"
+version = "0.0.2"
 base.archivesBaseName = "jvm-katana-compiler-plugin"
 
 repositories {
