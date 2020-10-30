@@ -94,10 +94,13 @@ private class OnFunction(val context: IrPluginContext) : IrElementTransformerVoi
 
     private fun tryAddClassJson(irClass: IrClass?) {
         if (irClass != null && shouldIncludeClass(irClass)) {
-            classes.putIfAbsent(irClass.fqNameWhenAvailable.toString(), getClassJson(irClass))
-
-            for (superType in irClass.superTypes) {
-                tryAddClassJson(superType.getClass())
+            val fqn = irClass.fqNameWhenAvailable.toString()
+            if (!classes.containsKey(fqn))
+            {
+                classes[fqn] = getClassJson(irClass)
+                for (superType in irClass.superTypes) {
+                    tryAddClassJson(superType.getClass())
+                }
             }
         }
     }
