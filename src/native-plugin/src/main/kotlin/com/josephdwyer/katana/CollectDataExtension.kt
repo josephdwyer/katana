@@ -7,21 +7,16 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.allParameters
 import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.path
+import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.js.descriptorUtils.getJetTypeFqName
 import org.jetbrains.kotlin.konan.file.File
-import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
-import org.jetbrains.kotlin.types.typeUtil.nullability
 
 open class CollectDataExtension(private val configuration: CompilerConfiguration) : IrGenerationExtension {
 
-    override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext)    {
+    override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         val visitor = OnFunction(pluginContext)
 
         for (file in moduleFragment.files) {
@@ -29,10 +24,11 @@ open class CollectDataExtension(private val configuration: CompilerConfiguration
         }
 
         // for some reason this is called 2 times, one without any data
-        if (visitor.collected.any()) {
+        if (visitor.functions.any()) {
             configuration[OUTPUT_FILE]?.let {
+                val katanaJson = KatanaJson(visitor.classes, visitor.functions)
                 val gson = GsonBuilder().setPrettyPrinting().create()
-                val data = gson.toJson(visitor.collected)
+                val data = gson.toJson(katanaJson)
                 File(it).writeText(data)
                 println("Katana data written to $it")
             }
@@ -40,18 +36,14 @@ open class CollectDataExtension(private val configuration: CompilerConfiguration
     }
 }
 
-private class OnFunction(
-        val context: IrPluginContext
-) :
-        IrElementTransformerVoid(), FunctionLoweringPass {
+private class OnFunction(val context: IrPluginContext) : IrElementTransformerVoid(), FunctionLoweringPass {
 
-    val collected = mutableListOf<FunctionJson>()
+    val functions = mutableListOf<FunctionJson>()
+    val classes = mutableMapOf<String, ClassJson>()
 
     override fun lower(irFunction: IrFunction) {
 
-        val visibility = irFunction.visibility.toString()
-        if (visibility != "public") {
-            // we only care about public ones
+        if (!shouldIncludeFunction(irFunction)) {
             return
         }
 
@@ -59,81 +51,35 @@ private class OnFunction(
         val startLine = irFunction.fileEntry.getLineNumber(irFunction.startOffset)
         val endLine = irFunction.fileEntry.getLineNumber(irFunction.endOffset)
 
-
         val file = FileJson(irFunction.file.path, startLine, endLine)
 
         val functionName = irFunction.name.toString()
 
         val parameters = irFunction.allParameters.map { parameter ->
-            val type = parameter.type as IrSimpleType
-            val typeAsClass = parameter.type.getClass()?.let { getClassInfo(it) }
-
-            val typeParameters = type.toKotlinType()
-                    .arguments
-                    .map {
-                        val typeNullability = it.type.nullability()
-                        val typeName = it.type.getJetTypeFqName(true)
-                        TypeParameterJson(typeName, typeNullability)
-                    }
+            tryAddClassJson(parameter.type.getClass())
 
             FunctionParameterJson(
                     parameter.name.toString(),
-                    TypeJson(type.classifier.descriptor.fqNameSafe.toString(), typeParameters, type.isNullable(), typeAsClass))
+                    getTypeJson(parameter.type as IrSimpleType))
         }
 
-        val returnTypeTypeParameters = irFunction.returnType.toKotlinType()
-                .arguments
-                .map {
-                    val returnTypeNullability = it.type.nullability()
-                    val typeName = it.type.getJetTypeFqName(true)
-                    TypeParameterJson(typeName, returnTypeNullability)
-                }
+        val returnType = getTypeJson(irFunction.returnType as IrSimpleType)
 
-        val returnTypeClass = irFunction.returnType.getClass()?.let {
-            getClassInfo(it)
-        }
+        val parentClass = irFunction.parentClassOrNull
 
-        val returnType = TypeJson(
-                irFunction.returnType.classifierOrNull?.descriptor?.fqNameSafe?.toString() ?: "Unit",
-                returnTypeTypeParameters,
-                irFunction.returnType.isNullable(),
-                returnTypeClass)
+        tryAddClassJson(irFunction.returnType.getClass())
+        tryAddClassJson(parentClass)
 
-        val classInfo = irFunction.parentClassOrNull?.let { getClassInfo(it) }
+        val function = FunctionJson(file, getPackage(irFunction), functionName,
+                irFunction.visibility.toString(), parameters, returnType,
+                parentClass?.fqNameForIrSerialization?.toString(), irFunction is IrConstructor)
 
-        // maybe a simpler way to get the package?
-        // irFunction.file.packageFragmentDescriptor
-
-        // if this function is in a class, just take the class's package
-        // otherwise it is the fully qualified name minus the function's name
-        val packageName = classInfo?.let { it.packageName } ?:
-        irFunction.fqNameWhenAvailable.toString()
-                .removeSuffix(irFunction.name.toString())
-                .removeSuffix(".")
-
-        var parent: String = irFunction.parent.let {
-            it.fqNameForIrSerialization.toString()
-        }
-
-        val function = FunctionJson(file, packageName, functionName,
-                visibility, parameters, returnType,
-                parent, classInfo, irFunction.isExpect)
-
-        collected.add(function)
+        functions.add(function)
     }
 
-    private fun getClassInfo(irClass: IrClass) : ClassJson {
-        // we are trying to remove ".className" from "some.namespace.className"
-        // but, if the class is not in a namespace (thus using the default "<root>" namespace
-        // there won't be any leading content - it will just be "className", so we need to remove in 2 stages
-        val packageName = irClass.fqNameWhenAvailable.toString()
-                .removeSuffix(irClass.name.toString())
-                .removeSuffix(".")
-
-        // should we default it to "<root>" if it is now empty or leave it to the consumer?
-
+    private fun getClassJson(irClass: IrClass): ClassJson {
         val superTypes = irClass.superTypes.map {
-            (it.classifierOrNull?.descriptor?.fqNameSafe.toString())
+            getTypeJson(it as IrSimpleType)
         }
 
         return ClassJson(
@@ -141,9 +87,63 @@ private class OnFunction(
                 irClass.isCompanion,
                 irClass.isData,
                 irClass.isInline,
-                irClass.isExpect,
                 irClass.kind,
                 superTypes,
-                packageName)
+                getPackage(irClass))
+    }
+
+    private fun tryAddClassJson(irClass: IrClass?) {
+        if (irClass != null && shouldIncludeClass(irClass)) {
+            val fqn = irClass.fqNameWhenAvailable.toString()
+            if (!classes.containsKey(fqn))
+            {
+                classes[fqn] = getClassJson(irClass)
+                for (superType in irClass.superTypes) {
+                    tryAddClassJson(superType.getClass())
+                }
+            }
+        }
+    }
+
+    private fun shouldIncludeClass(irClass: IrClass): Boolean {
+        // we only care about public actual ones
+        return !irClass.isExpect && irClass.visibility.toString() == "public"
+    }
+
+    private fun shouldIncludeFunction(irFunction: IrFunction): Boolean {
+        // we only care about public actual ones whose classes are also public and actual
+        val parentClass = irFunction.parentClassOrNull
+        return !irFunction.isExpect &&
+                irFunction.visibility.toString() == "public" &&
+                (parentClass == null || shouldIncludeClass(parentClass))
+    }
+
+    private fun getPackage(irElement: IrElement): String {
+        return irElement.getPackageFragment()?.fqNameForIrSerialization.toString()
+    }
+
+    private fun getFullyQualifiedName(irSimpleType: IrSimpleType): String {
+        return (irSimpleType.classifier.owner as IrDeclarationWithName).fqNameWhenAvailable.toString()
+    }
+
+    private fun getTypeArgumentJson(type: IrTypeArgument): TypeArgumentJson {
+        return when (type) {
+            is IrStarProjection -> TypeArgumentJson(isStar = true, null, null)
+            is IrTypeProjection -> {
+                val projectedType = type.type as IrSimpleType
+                TypeArgumentJson(isStar = false, getTypeJson(projectedType), type.variance.label)
+            }
+            else -> throw AssertionError("Unexpected type argument $type ${type.render()}")
+        }
+    }
+
+    private fun getTypeArguments(type: IrSimpleType): List<TypeArgumentJson> {
+        return type.arguments.map { getTypeArgumentJson(it) }
+    }
+
+    private fun getTypeJson(type: IrSimpleType): TypeJson {
+        val nullable = type.isNullable()
+        val typeName = getFullyQualifiedName(type)
+        return TypeJson(typeName, getTypeArguments(type), nullable)
     }
 }

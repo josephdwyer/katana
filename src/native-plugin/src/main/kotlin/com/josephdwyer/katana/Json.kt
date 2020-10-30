@@ -1,8 +1,11 @@
 package com.josephdwyer.katana
 
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.types.typeUtil.TypeNullability
 
+data class KatanaJson(
+        val classes: Map<String, ClassJson>,
+        val functions: List<FunctionJson>
+)
 
 data class FileJson(
         val filePath: String,
@@ -15,16 +18,18 @@ data class FunctionParameterJson(
         val type: TypeJson
 )
 
-data class TypeParameterJson(
-        val type: String,
-        val nullability: TypeNullability
+// Type arguments for specific references to classes, e.g. Int for List<Int> or * for List<*>
+data class TypeArgumentJson(
+        val isStar: Boolean,
+        val type: TypeJson?,
+        val variance: String?
 )
 
+// Concrete types, e.g. List<Int>
 data class TypeJson(
         val name: String,
-        val typeParameters: List<TypeParameterJson>,
-        val nullable: Boolean,
-        val classInfo: ClassJson?
+        val typeArguments: List<TypeArgumentJson>,
+        val nullable: Boolean
 )
 
 data class ClassJson(
@@ -32,9 +37,8 @@ data class ClassJson(
         val isCompanion: Boolean,
         val isData: Boolean,
         val isInline: Boolean,
-        val isExpect: Boolean,
         val kind: ClassKind,
-        val superClasses: List<String>,
+        val superClasses: List<TypeJson>,
         val packageName: String
 )
 
@@ -45,7 +49,6 @@ data class FunctionJson(
         val visibility: String,
         val parameters: List<FunctionParameterJson>?,
         val returnType: TypeJson,
-        val parent: String,
-        val classInfo: ClassJson?,
-        val isExpect: Boolean
+        val parentClass: String?,
+        val isConstructor: Boolean
 )
