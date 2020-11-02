@@ -10,11 +10,15 @@ repositories {
     maven {
         url = uri("https://plugins.gradle.org/m2/")
     }
+    maven {
+        // this is for the Katana compiler plugin
+        url = uri("https://dl.bintray.com/kotlin/kotlin-eap")
+    }
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
-    kotlin("kapt") version "1.4.10"
+    kotlin("jvm") version "1.4.20-RC"
+    kotlin("kapt") version "1.4.20-RC"
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "6.0.0"
