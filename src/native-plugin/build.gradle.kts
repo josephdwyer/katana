@@ -1,7 +1,7 @@
 import java.util.Date
 
 group = "com.josephdwyer.katana"
-version = "0.0.3"
+version = "0.0.4"
 base.archivesBaseName = "katana-compiler-plugin"
 
 repositories {
@@ -13,8 +13,8 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
-    kotlin("kapt") version "1.4.10"
+    kotlin("jvm") version "1.4.20"
+    kotlin("kapt") version "1.4.20"
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "6.0.0"

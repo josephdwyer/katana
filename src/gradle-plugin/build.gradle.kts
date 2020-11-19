@@ -10,9 +10,9 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
+    kotlin("jvm") version "1.4.20"
     id("java-gradle-plugin")
-    kotlin("kapt") version "1.4.10"
+    kotlin("kapt") version "1.4.20"
     id("com.gradle.plugin-publish") version "0.12.0"
 }
 
