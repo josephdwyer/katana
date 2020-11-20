@@ -1,17 +1,19 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Publish
 
 # Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the joe/publish_ci branch
-  push:
-    branches: [ joe/publish_ci ]
-  pull_request:
-    branches: [ joe/publish_ci ]
-
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    publishNativePlugin:
+      description: 'Publish the native plugin?'
+      default: 'false'
+      required: true
+    publishGradlePlugin:
+      description: 'Publish the gradle plugin?'
+      default: 'false'
+      required: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
