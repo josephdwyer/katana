@@ -8,11 +8,9 @@ on:
   workflow_dispatch:
     publishNativePlugin:
       description: 'Publish the native plugin?'
-      default: 'false'
       required: true
     publishGradlePlugin:
       description: 'Publish the gradle plugin?'
-      default: 'false'
       required: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
