@@ -42,13 +42,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Publish Native Plugin
-        if: github.event.inputs.publishNativePlugin == "true"
+        if: ${{ github.event.inputs.publishNativePlugin == 'true' }}
         run: ./gradlew bintrayUpload --no-daemon --stacktrace
         env:
           BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
       - name: Publish Gradle Plugin
-        if: github.event.inputs.publishGradlePlugin == "true"
+        if: ${{ github.event.inputs.publishGradlePlugin == 'true' }}
         run: ./gradlew publishPlugins --no-daemon --stacktrace
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
