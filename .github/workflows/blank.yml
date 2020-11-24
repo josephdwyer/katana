@@ -39,6 +39,13 @@ jobs:
           write-mode: overwrite
           contents: |
               gradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }}
+      - name: Write gradle.properties
+        uses: DamianReeves/write-file-action@v1.0
+        with:
+          # The path to the file to write
+          path: ~/.gradle/gradle.properties 
+          write-mode: append
+          contents: |
               gradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
       - name: Cache gradle
         uses: actions/cache@v2
