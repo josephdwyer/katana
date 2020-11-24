@@ -7,12 +7,16 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
+      publishJvmPlugin:
+        description: 'Publish the jvm plugin?'
+        default: 'false'
+        required: true
       publishNativePlugin:
         description: 'Publish the native plugin?'
         default: 'false'
         required: true
       publishGradlePlugin:
-        description: 'Publish the Gradle plugin?'
+        description: 'Publish the gradle plugin?'
         default: 'false'
         required: true
 
@@ -41,15 +45,24 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('*.gradle.kts') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      - name: Publish Native Plugin
-        if: ${{ github.event.inputs.publishNativePlugin == 'true' }}
+      - name: Publish JVM plugin
+        if: ${{ github.event.inputs.publishJvmPlugin == 'true' }}
         run: ./gradlew bintrayUpload --no-daemon --stacktrace
+        working-directory: src/jvm-plugin
         env:
           BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
-      - name: Publish Gradle Plugin
+      - name: Publish native plugin
+        if: ${{ github.event.inputs.publishNativePlugin == 'true' }}
+        run: ./gradlew bintrayUpload --no-daemon --stacktrace
+        working-directory: src/native-plugin
+        env:
+          BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+      - name: Publish gradle plugin
         if: ${{ github.event.inputs.publishGradlePlugin == 'true' }}
         run: ./gradlew publishPlugins --no-daemon --stacktrace
+        working-directory: src/gradle-plugin
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
