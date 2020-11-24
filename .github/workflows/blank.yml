@@ -42,7 +42,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Publish Native Plugin
-        if: github.event.inputs.publishNativePlugin == 'true'
+        if: github.event.inputs.publishNativePlugin == "true"
         run: ./gradlew bintrayUpload --no-daemon --stacktrace
         env:
           BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
