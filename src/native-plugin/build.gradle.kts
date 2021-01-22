@@ -13,8 +13,8 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.20"
-    kotlin("kapt") version "1.4.20"
+    kotlin("jvm") version "1.4.30-RC"
+    kotlin("kapt") version "1.4.30-RC"
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "6.0.0"
