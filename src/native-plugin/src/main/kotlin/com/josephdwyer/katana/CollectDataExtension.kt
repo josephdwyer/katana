@@ -1,27 +1,27 @@
 package com.josephdwyer.katana
 
 import com.google.gson.GsonBuilder
-import org.jetbrains.kotlin.backend.common.FunctionLoweringPass
+import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.allParameters
-import org.jetbrains.kotlin.backend.common.runOnFilePostfix
+import org.jetbrains.kotlin.backend.common.lower
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
+import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.konan.file.File
 
 open class CollectDataExtension(private val configuration: CompilerConfiguration) : IrGenerationExtension {
 
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         val visitor = OnFunction(pluginContext)
-
-        for (file in moduleFragment.files) {
-            visitor.runOnFilePostfix(file)
-        }
+        visitor.lower(moduleFragment)
 
         // for some reason this is called 2 times, one without any data
         if (visitor.functions.any()) {
@@ -36,12 +36,29 @@ open class CollectDataExtension(private val configuration: CompilerConfiguration
     }
 }
 
-private class OnFunction(val context: IrPluginContext) : IrElementTransformerVoid(), FunctionLoweringPass {
+private class OnFunction(val context: IrPluginContext) : IrElementTransformerVoid(), FileLoweringPass {
 
     val functions = mutableListOf<FunctionJson>()
     val classes = mutableMapOf<String, ClassJson>()
 
-    override fun lower(irFunction: IrFunction) {
+    override fun lower(irFile: IrFile) {
+        irFile.acceptVoid(object : IrElementVisitorVoid {
+            override fun visitElement(element: IrElement) {
+                element.acceptChildrenVoid(this)
+            }
+
+            override fun visitFunction(declaration: IrFunction) {
+                // Recursing into the function's children would match the implementation of
+                // FunctionLoweringPass which we were using, but we don't care about nested functions
+                // and hopefully avoids the performance issues mentioned in https://github.com/JetBrains/kotlin/commit/b5695188f9002f10bbd0987c63f64f270df2c2a0
+                // where FunctionLoweringPass was removed
+                //declaration.acceptChildrenVoid(this)
+                onFunction(declaration)
+            }
+        })
+    }
+
+    private fun onFunction(irFunction: IrFunction) {
 
         if (!shouldIncludeFunction(irFunction)) {
             return
