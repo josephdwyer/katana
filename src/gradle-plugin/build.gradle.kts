@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
 
 group = "com.josephdwyer.katana"
 base.archivesBaseName = "gradle-plugin"
-version = "0.0.25"
+version = "0.0.26"
 
 repositories {
     maven { setUrl("https://dl.bintray.com/kotlin/kotlin-eap") }
@@ -36,7 +36,7 @@ gradlePlugin {
             id = "com.josephdwyer.katana"
             displayName = "Katana"
             description = "A simple plugin that extracts information about classes and functions from the build"
-            implementationClass = "com.josephdwyer.katana.gradle.Katana"
+            implementationClass = "com.josephdwyer.katana.gradle.KatanaPlugin"
         }
     }
 }
