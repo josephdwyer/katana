@@ -2,10 +2,9 @@ import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
 
 group = "com.josephdwyer.katana"
 base.archivesBaseName = "gradle-plugin"
-version = "0.0.26"
+version = "0.0.27"
 
 repositories {
-    maven { setUrl("https://dl.bintray.com/kotlin/kotlin-eap") }
     mavenCentral()
 }
 

@@ -1,9 +1,9 @@
-import java.util.Date
+import java.net.URI
 
 // this project does not actually do anything, but we have to have something published
 // so that compiling projects with JVM things will work
 
-group = "com.josephdwyer.katana"
+group = "com.joseph-dwyer.katana"
 version = "0.0.2"
 base.archivesBaseName = "jvm-katana-compiler-plugin"
 
@@ -18,13 +18,47 @@ repositories {
 plugins {
     kotlin("jvm") version "1.4.10"
     id("maven-publish")
-    id("com.jfrog.bintray") version "1.8.5"
     id("java")
+    id("signing")
+    id("org.jetbrains.dokka") version "0.9.18"
 }
 
 dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-compiler")
-    compileOnly("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.5")
+}
+
+fun isReleaseBuild(): Boolean {
+    return !project.version.toString().contains("SNAPSHOT")
+}
+
+fun getReleaseRepositoryUrl(): URI {
+    return URI("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+}
+
+fun getSnapshotRepositoryUrl(): URI {
+    return URI("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+}
+
+fun getRepositoryUsername(): String {
+    return System.getenv("SONATYPE_USERNAME") ?: ""
+}
+
+fun getRepositoryPassword() : String {
+    return System.getenv("SONATYPE_PASSWORD") ?: ""
+}
+
+java {
+    withSourcesJar()
+}
+
+tasks.dokka {
+}
+
+val javadocsJarProvider = tasks.register("javadocsJar", Jar::class) {
+    dependsOn(tasks.named("dokka"))
+
+    archiveClassifier.set("javadoc")
+    from(tasks.withType(org.jetbrains.dokka.gradle.DokkaTask::class).first().outputDirectory)
 }
 
 val artifactName = "jvm-katana-compiler-plugin"
@@ -46,13 +80,15 @@ val pomLicenseDist = "repo"
 val pomDeveloperId = "josephdwyer"
 val pomDeveloperName = "Joseph Dwyer"
 
-
 publishing {
     publications {
         create<MavenPublication>("katana") {
             groupId = artifactGroup
             artifactId = artifactName
             version = artifactVersion
+
+            artifact(javadocsJarProvider.get())
+
             from(components["java"])
 
             pom {
@@ -80,34 +116,28 @@ publishing {
                 }
             }
         }
+        repositories {
+            maven {
+                url = if (isReleaseBuild()) getReleaseRepositoryUrl() else getSnapshotRepositoryUrl()
+                credentials {
+                    username = getRepositoryUsername()
+                    password = getRepositoryPassword()
+                }
+            }
+        }
     }
 }
 
-bintray {
-    user = System.getenv("BINTRAY_USER")
-    key = System.getenv("BINTRAY_API_KEY")
-    publish = true
 
-    setPublications("katana")
+signing {
+    setRequired({ isReleaseBuild() })
+    val signingKeyId = System.getenv("SIGNING_KEYID")
+    val signingKey = System.getenv("SIGNING_KEY")
+    val signingPassword = System.getenv("SIGNING_PASSWORD")
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    sign(publishing.publications)
+}
 
-    pkg.apply {
-        repo = "maven"
-        name = artifactName
-        userOrg = "josephdwyer"
-        githubRepo = githubRepo
-        vcsUrl = pomScmUrl
-        description = "Kotlin compiler plugin that dumps out type information"
-        setLabels("kotlin/native", "compiler")
-        setLicenses("MIT")
-        desc = description
-        websiteUrl = pomUrl
-        issueTrackerUrl = pomIssueUrl
-
-        version.apply {
-            name = artifactVersion
-            desc = pomDesc
-            released = Date().toString()
-            vcsTag = artifactVersion
-        }
-    }
+tasks.withType<Sign>().configureEach {
+    onlyIf { isReleaseBuild() }
 }
