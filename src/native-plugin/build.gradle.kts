@@ -1,6 +1,6 @@
-import java.util.Date
+import java.net.URI
 
-group = "com.josephdwyer.katana"
+group = "com.joseph-dwyer.katana"
 version = "0.0.5"
 base.archivesBaseName = "katana-compiler-plugin"
 
@@ -16,16 +16,16 @@ plugins {
     kotlin("jvm") version "1.4.30"
     kotlin("kapt") version "1.4.30"
     id("maven-publish")
-    id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "6.0.0"
     id("java")
+    id("signing")
+    id("org.jetbrains.dokka") version "0.9.18"
 }
 
 dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-compiler")
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
-    compileOnly("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.5")
     implementation("com.google.code.gson:gson:2.8.6")
 }
 
@@ -36,6 +36,41 @@ tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>().con
 
     // relocate will avoid conflicts if the project importing this is also using gson
     relocate("com.google.code.gson", "com.josephdwyer.katana.gson")
+}
+
+
+java {
+    withSourcesJar()
+}
+
+tasks.dokka {
+}
+
+val javadocsJarProvider = tasks.register("javadocsJar", Jar::class) {
+    dependsOn(tasks.named("dokka"))
+
+    archiveClassifier.set("javadoc")
+    from(tasks.withType(org.jetbrains.dokka.gradle.DokkaTask::class).first().outputDirectory)
+}
+
+fun isReleaseBuild(): Boolean {
+    return !project.version.toString().contains("SNAPSHOT")
+}
+
+fun getReleaseRepositoryUrl(): URI {
+    return URI("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+}
+
+fun getSnapshotRepositoryUrl(): URI {
+    return URI("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+}
+
+fun getRepositoryUsername(): String {
+    return System.getenv("SONATYPE_USERNAME") ?: ""
+}
+
+fun getRepositoryPassword() : String {
+    return System.getenv("SONATYPE_PASSWORD") ?: ""
 }
 
 val artifactName = "katana-compiler-plugin"
@@ -57,13 +92,14 @@ val pomLicenseDist = "repo"
 val pomDeveloperId = "josephdwyer"
 val pomDeveloperName = "Joseph Dwyer"
 
-
 publishing {
     publications {
         create<MavenPublication>("katana") {
             groupId = artifactGroup
             artifactId = artifactName
             version = artifactVersion
+
+            artifact(tasks.named("javadocsJar").get())
             from(components["java"])
 
             pom {
@@ -91,34 +127,28 @@ publishing {
                 }
             }
         }
+
+        repositories {
+            maven {
+                url = if (isReleaseBuild()) getReleaseRepositoryUrl() else getSnapshotRepositoryUrl()
+                credentials {
+                    username = getRepositoryUsername()
+                    password = getRepositoryPassword()
+                }
+            }
+        }
     }
 }
 
-bintray {
-    user = System.getenv("BINTRAY_USER")
-    key = System.getenv("BINTRAY_API_KEY")
-    publish = true
+signing {
+    setRequired({ isReleaseBuild() })
+    val signingKeyId = System.getenv("SIGNING_KEYID")
+    val signingKey = System.getenv("SIGNING_KEY")
+    val signingPassword = System.getenv("SIGNING_PASSWORD")
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    sign(publishing.publications)
+}
 
-    setPublications("katana")
-
-    pkg.apply {
-        repo = "maven"
-        name = artifactName
-        userOrg = "josephdwyer"
-        githubRepo = githubRepo
-        vcsUrl = pomScmUrl
-        description = "Kotlin compiler plugin that dumps out type information"
-        setLabels("kotlin/native", "compiler")
-        setLicenses("MIT")
-        desc = description
-        websiteUrl = pomUrl
-        issueTrackerUrl = pomIssueUrl
-
-        version.apply {
-            name = artifactVersion
-            desc = pomDesc
-            released = Date().toString()
-            vcsTag = artifactVersion
-        }
-    }
+tasks.withType<Sign>().configureEach {
+    onlyIf { isReleaseBuild() }
 }
