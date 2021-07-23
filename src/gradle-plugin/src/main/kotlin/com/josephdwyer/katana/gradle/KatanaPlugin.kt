@@ -35,7 +35,7 @@ class KatanaPlugin : KotlinCompilerPluginSupportPlugin {
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.joseph-dwyer.katana",
         artifactId = "jvm-katana-compiler-plugin",
-        version = "0.0.2"
+        version = "0.0.3"
     )
 
     // This points to our native plugin that is published on bintray
@@ -43,6 +43,6 @@ class KatanaPlugin : KotlinCompilerPluginSupportPlugin {
     override fun getPluginArtifactForNative(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.joseph-dwyer.katana",
         artifactId = "katana-compiler-plugin",
-        version = "0.0.5"
+        version = "0.0.6"
     )
 }
