@@ -1,7 +1,7 @@
 import java.net.URI
 
 group = "com.joseph-dwyer.katana"
-version = "0.0.5"
+version = "0.0.6"
 base.archivesBaseName = "katana-compiler-plugin"
 
 repositories {
@@ -13,8 +13,8 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.30"
-    kotlin("kapt") version "1.4.30"
+    kotlin("jvm") version "1.5.21"
+    kotlin("kapt") version "1.5.21"
     id("maven-publish")
     id("com.github.johnrengelman.shadow") version "6.0.0"
     id("java")

@@ -16,7 +16,7 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
+    kotlin("jvm") version "1.5.21"
     id("maven-publish")
     id("java")
     id("signing")
