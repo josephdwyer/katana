@@ -2,23 +2,23 @@ import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
 
 group = "com.josephdwyer.katana"
 base.archivesBaseName = "gradle-plugin"
-version = "0.0.27"
+version = "0.0.28"
 
 repositories {
     mavenCentral()
 }
 
 plugins {
-    kotlin("jvm") version "1.4.30"
+    kotlin("jvm") version "1.5.21"
     id("java-gradle-plugin")
-    kotlin("kapt") version "1.4.30"
+    kotlin("kapt") version "1.5.21"
     id("com.gradle.plugin-publish") version "0.12.0"
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin-api:1.4.10")
-    runtimeOnly("org.jetbrains.kotlin", "kotlin-reflect", "1.4.10")
-    implementation(kotlin("gradle-plugin", "1.4.10"))
+    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin-api:1.5.21")
+    runtimeOnly("org.jetbrains.kotlin", "kotlin-reflect", "1.5.21")
+    implementation(kotlin("gradle-plugin", "1.5.21"))
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
 }

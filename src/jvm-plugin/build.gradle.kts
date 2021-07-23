@@ -4,7 +4,7 @@ import java.net.URI
 // so that compiling projects with JVM things will work
 
 group = "com.joseph-dwyer.katana"
-version = "0.0.2"
+version = "0.0.3"
 base.archivesBaseName = "jvm-katana-compiler-plugin"
 
 repositories {
@@ -16,7 +16,7 @@ repositories {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.10"
+    kotlin("jvm") version "1.5.21"
     id("maven-publish")
     id("java")
     id("signing")
