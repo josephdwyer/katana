@@ -20,7 +20,7 @@ plugins {
     id("maven-publish")
     id("java")
     id("signing")
-    id("org.jetbrains.dokka") version "0.9.18"
+    id("org.jetbrains.dokka") version "1.5.0"
 }
 
 dependencies {
@@ -51,11 +51,12 @@ java {
     withSourcesJar()
 }
 
-tasks.dokka {
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+
 }
 
 val javadocsJarProvider = tasks.register("javadocsJar", Jar::class) {
-    dependsOn(tasks.named("dokka"))
+    dependsOn(tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>())
 
     archiveClassifier.set("javadoc")
     from(tasks.withType(org.jetbrains.dokka.gradle.DokkaTask::class).first().outputDirectory)
