@@ -16,9 +16,9 @@ plugins {
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin-api:1.4.10")
-    runtimeOnly("org.jetbrains.kotlin", "kotlin-reflect", "1.4.10")
-    implementation(kotlin("gradle-plugin", "1.4.10"))
+    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin-api:1.5.21")
+    runtimeOnly("org.jetbrains.kotlin", "kotlin-reflect", "1.5.21")
+    implementation(kotlin("gradle-plugin", "1.5.21"))
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
 }
